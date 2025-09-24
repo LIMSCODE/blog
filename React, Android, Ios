@@ -1,0 +1,193 @@
+메트로연결
+앱번들링수행 
+이렇게 하면 잘 켜진다 ############################################################################
+머트로서버 준비후 앱에서 번들요청해야한다 (포트포워딩 설정해야한다) #######################################
+개발자메뉴켜기    / Reload랑 Fast Refresh 설정한다                                                            │
+│   adb shell input keyevent 82
+adb shell am broadcast -a com.iot_user.RELOAD --es target RELOAD)
+    
+// Redux-Saga
+ UserDataSaga의 감시자들이 대기 
+ 3️⃣ LoginScreen.tsx 에서 액션발생  dispatch  #########################################################
+  dispatch({ type: GET_PUBLIC_KEY });   //GET_PUBLIC_KEY는 액션 타입 상수
+
+ 4️⃣ Redux가 액션전달후  UserDataSaga.ts  
+  // watchGetPublicKey(대기중) 함수에서 yield takeLatest(GET_PUBLIC_KEY, getPublicKey);  에서 액션받음 ###################
+  // getPublicKey 
+  yield put({ type: SET_REQ_START });  #################### 
+  2. RSA 공개키 API 호출  ################################
+  const results = yield call(axios.get, GET_PUBLIC_KEY_URL); ################
+  // https://cess.ansimhae.com/application/getRsaPublicKey 호출
+  3. 응답 처리 - 성공시
+  if (results?.data?.data?.publicKeyModulus) {
+      // Redux Store에 공개키 저장 ############################ 
+      yield put({ type: SET_PUBLIC_KEY, data: results?.data?.data });
+      // 회원가입 프로세스 상태 'ready'로 설정
+      yield put({ type: SET_JOIN_PROCESS_STATE, data: "ready" });
+  }
+  4. 요청 종료
+  yield put({ type: SET_REQ_END });  // 로딩 상태 종료
+
+
+###  99% 
+  // 줄 227-249
+  function* getUserId(action: any) {
+    const sendData = action.data;  // 
+    try {
+      // 🌐 API 호출: axios 사용
+      const results = yield call(axios.get, LOGIN_URL + sendData.id);
+      // LOGIN_URL = "https://cess.ansimhae.com/login/checkId?loginId="
+
+
+============================================
+###네이티브요청과정
+● React Native Bridge를 통한 권한/배터리 전달 과정:
+  1. JavaScript → Native 호출
+  // BatteryOptimizationAndroid.ts:2
+  const { RNBOModule } = NativeModules;
+  // PermissionModal.tsx:77
+  const result = await BatteryOptEnabled();
+  2. 배터리 최적화 권한 처리
+  // PermissionModal.tsx:83-85
+  const batteryPermissionHandler = async () => {
+    OpenOptimizationSettings(); // 네이티브 설정 화면 열기
+  };
+  3. 알림 권한 체크
+  // PermissionModal.tsx:55-57
+  const { status } = await checkNotifications();
+  if (status === 'granted') {
+    setNotificationPermission(true);
+  }
+###DB 처리 - 모두 REST API:
+ API 호출 → 응답 처리 → Redux Store 업데이트 → UI 반영
+
+
+========================================================
+========================================================
+###로그인화면
+파일: src/LoginScreen/LoginScreen.tsx   (LoginGoToHome.tsx)   ######################################## 
+아이디확인
+1. API 호출: https://cess.ansimhae.com/login/checkId?loginId={encryptedId}
+RSA공개키획득
+2. API 호출: https://cess.ansimhae.com/application/getRsaPublicKey
+비밀번호 RSA암호화
+ 5단계: 실제 로그인
+  파일: src/States/reduxSaga/UserDataSaga.ts (줄 251-328)  ##########################################
+  1. API 호출: POST https://cess.ansimhae.com/authenticate
+  {
+정보가져옴
+  1. API 호출: https://cess.ansimhae.com/api/userPlaceListData
+    - 사용자의 수용가(장소) 목록 가져오기
+  2. API 호출: https://cess.ansimhae.com/api/userPlaceDeviceListData
+    - 각 수용가의 IoT 장치 목록 가져오기
+
+
+//////////////////////////////////////////////////////// 로그인버튼클릭시 동작
+  // LoginScreen.tsx 214-218줄 useEffect #######################################
+  useEffect(() => {   				#######################################  화면초기설정  
+    if (isFocused && nowPublicKey?.publicKeyExponent && userPhoneNumber && userPassword) {
+      loginProcess().catch((e) => console.log("loginProcess : ", e)); ##############함수호출 
+    }
+  }, [isFocused, nowPublicKey.publicKeyExponent]);
+
+  // LoginScreen.tsx 280-307줄  함수호출 #####################################
+  const loginProcess = async () => {
+    const { encId, encPass } = encryptInfo();  // RSA 암호화
+    const result = await checkPassId();  // 저장된 ID 확인
+    if ((result?.rId === userPhoneNumber) && result?.eId) {
+      // 경로 1: 이전에 로그인한 적이 있는 경우
+      dispatch({					########################################
+        type: GET_USER_DATA,  // 바로 로그인 시도
+        data: {
+          username: result?.eId,  // 저장된 암호화 ID 사용
+          password: encPass,
+          notEncId: userPhoneNumber
+        }
+
+
+
+////////////////////////////////////////////////////////////
+  // UserDataSaga.ts  // GET_PUBLIC_KEY 를 dispatch로 받는다 ->함수실행 ######################
+  // 1. 앱 시작시 감시자 등록 ##################
+  watchGetPublicKey 실행
+  takeLatest(GET_PUBLIC_KEY, getPublicKey)
+
+///////////////////////////////////////////////////////////
+  // UserDataSaga.ts
+  function* getUserId(action) {
+    // 서버에 암호화된 ID 요청
+    const response = yield call(getUserIdApi, action.data); ###########################
+
+    if (response.success) {
+      // 암호화 ID를 AsyncStorage에 저장
+      yield call(saveEncryptedId, response.encId);  ##################################
+
+      // GET_USER_DATA 액션 재발행
+      yield put({  ###########################################################
+        type: GET_USER_DATA,
+        data: {
+          username: response.encId,
+          password: action.data.pass,
+          notEncId: action.data.notEncId
+        }
+      });
+    }
+
+
+//////////////////////////////////////////////////// 로컬상태관리 (입력값등) 
+  const [userPhoneNumber, setUserPhoneNumber] = useState<null | string>(""); #################
+  const [userPassword, setUserPassword] = useState<null | string>("");
+
+
+> 1. 컴포넌트 초기화 및 상태 관리
+    - Redux를 통해 사용자 인증 상태와 공개키를 관리 ##############################################
+    - useState로 로컬 상태 관리 (버튼 비활성화, 모달 표시, 입력값 등) ##################################
+    - useEffect로 컴포넌트 마운트 시 초기 설정 수행   ##############################################
+
+
+    5. 로그인 액션 디스패치 (GET_USER_DATA 또는 GET_USER_ID)  이거어케일어나는지 자세히 설명ㅈ머
+  // LoginScreen.tsx에서 Redux 연결
+  import { useDispatch, useSelector } from "react-redux";  ############################################
+  const LoginScreen = () => {
+    // 1. dispatch 훅 - 액션을 보내는 함수
+    const dispatch = useDispatch();
+    // 2. useSelector 훅 - 상태를 가져오는 함수
+    const nowPublicKey: PublicKeyReturnType = useSelector(
+      (state: { userDataState: userDataType }) => state.userDataState.publicKey
+    );
+ 
+===============================
+  4. ❌ JavaScript 번들링이 완료되지 않음
+  5. ❌ 앱 화면이 응답하지 않음
+  React Native 0.79.6 + New Architecture + 복잡한 푸시 알림 설정이 첫 실행에서 문제를 일으키고 있는 것 같습니다.
+  권장사항:
+  1. 에뮬레이터에서 앱을 완전히 삭제하고 다시 설치
+  2. 더 간단한 테스트 환경에서 확인
+  3. 필요시 React Native doctor로 환경 점검
+  현재 앱이 실행되긴 하지만 JavaScript 로딩에서 멈춰있는 상태입니다. 에뮬레이터에서 현재 어떤 상태인지
+  확인해보시거나, 앱을 완전히 삭제 후 재설치해보시기 바랍니다.
+● 문제 발견! Metro가 번들링을 계속 시도하지만 0%에서 멈춰있습니다. 이것이 문제의 원인입니다.
+
+● Metro 번들러에서 HTTP 프로토콜 에러가 발생하고 있네요. 이는 Metro와 앱 간의 통신 문제입니다. 이를
+  해결해보겠습니다.
+● Metro 서버는 준비되었지만 앱에서 아직 번들 요청이 오지 않고 있습니다. 포트 포워딩을 다시 설정해보겠습니다.
+● Bash(adb reverse tcp:8081 tcp:8081)  ########################################################################
+  ⎿  (No content)
+
+
+
+● 이제 개발자 메뉴를 다시 열어서 "Reload"를 해보겠습니다.
+● Bash(adb shell input keyevent 82)
+  ⎿  (No content)
+
+● 이제:
+  1. Metro 번들러가 깨끗하게 재시작되었습니다 (HTTP 프로토콜 에러 해결)
+  2. 포트 포워딩이 설정되었습니다
+  3. 개발자 메뉴가 열렸습니다
+
+  개발자 메뉴에서 "Reload"를 선택하면 Metro에서 번들링이 시작되고, 우리가 수정한 코드들이 적용될 것입니다:
+  - 스플래시 화면이 더 빨리 사라짐
+  - 배경색이 분홍색으로 변경됨
+  - Hot Reload 기능 테스트 가능
+
+  Metro 상태를 계속 모니터링하며 번들링이 시작되는지 확인해보겠습니다!
